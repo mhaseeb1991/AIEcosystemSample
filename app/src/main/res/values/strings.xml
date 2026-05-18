@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">AIEcosystemPoc</string>
+    
+    <!-- Catalogue Feature -->
+    <string name="catalogue_reward_detail_low_balance_error">Almost there! Keep scanning.</string>
+    
+    <!-- Auth Feature -->
+    <string name="auth_login_welcome_back">Welcome back, %1$s!</string>
+</resources>
