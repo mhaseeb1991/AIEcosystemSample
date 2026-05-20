@@ -13,7 +13,8 @@ This repository uses an AI-assisted development workflow. All AI agents, archite
 ### Figma MCP Server (Design Source of Truth)
 This project uses a live Figma MCP server for design data. **Do NOT use PNG files as the design reference.**
 
-- **MCP Server Script:** `/Users/mohammadhaseeb/AndroidStudioProjects/LocalLLM/figma_mcp_server.py`
+- **MCP Launcher Script:** `llm-servers/start_figma_mcp.py`
+- **MCP Server Script:** `llm-servers/figma_mcp_server.py`
 - **MCP Config:** `.claude/mcp.json` (registered in this project)
 - **Usage Guide:** `ai/guidelines/guide/FIGMA_MCP_GUIDE.md`
 

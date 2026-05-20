@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "figma": {
+      "command": "python3",
+      "args": ["llm-servers/start_figma_mcp.py"],
+      "env": {
+        "PYTHONPATH": "tools/figma"
+      }
+    }
+  }
+}

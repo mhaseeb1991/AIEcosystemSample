@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NormalizedFigmaUiSchema",
+  "description": "Clean UI schema output from normalize_figma_node.py. Used by AI Designer Agent to generate Compose code.",
+  "type": "object",
+  "required": ["screen", "source", "layout", "tokens", "components"],
+  "properties": {
+    "screen": { "type": "string" },
+    "source": {
+      "type": "object",
+      "required": ["fileId", "nodeId", "nodeName"],
+      "properties": {
+        "fileId": { "type": "string" },
+        "nodeId": { "type": "string" },
+        "nodeName": { "type": "string" }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "width":           { "type": ["number", "null"] },
+        "height":          { "type": ["number", "null"] },
+        "contentWidth":    { "type": ["number", "null"] },
+        "backgroundColor": { "type": ["string", "null"] },
+        "autoLayout": {
+          "type": "object",
+          "properties": {
+            "direction":        { "type": "string", "enum": ["vertical","horizontal"] },
+            "itemSpacing":      { "type": "number" },
+            "paddingTop":       { "type": "number" },
+            "paddingBottom":    { "type": "number" },
+            "paddingLeft":      { "type": "number" },
+            "paddingRight":     { "type": "number" },
+            "primaryAxisAlign": { "type": "string" },
+            "counterAxisAlign": { "type": "string" }
+          }
+        }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "properties": {
+        "primaryColor": { "type": ["string","null"] },
+        "palette": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "hex":        { "type": "string" },
+              "usageCount": { "type": "integer" }
+            }
+          }
+        },
+        "typography": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "fontFamily":   { "type": "string" },
+              "fontSize":     { "type": "number" },
+              "fontWeight":   { "type": "number" },
+              "lineHeightPx": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "description": "Ordered list of semantic UI components, top-to-bottom as rendered on screen",
+      "items": {
+        "type": "object",
+        "required": ["type","id","name"],
+        "properties": {
+          "type": { "type": "string", "enum": ["Text","TextField","Button","Image","Checkbox","Divider","Icon"] },
+          "id":   { "type": "string" },
+          "name": { "type": "string" },
+          "text":            { "type": "string" },
+          "textColor":       { "type": "string" },
+          "backgroundColor": { "type": "string" },
+          "cornerRadius":    { "type": "integer" },
+          "width":           { "type": "number" },
+          "height":          { "type": "number" },
+          "typography": {
+            "type": "object",
+            "properties": {
+              "fontFamily":    { "type": "string" },
+              "fontWeight":    { "type": "number" },
+              "fontSize":      { "type": "number" },
+              "lineHeightPx":  { "type": "number" },
+              "letterSpacing": { "type": "number" },
+              "textAlign":     { "type": "string" }
+            }
+          },
+          "mixedTypography": {
+            "type": "array",
+            "description": "Per-run font overrides for mixed-style text",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fontFamily": { "type": "string" },
+                "fontWeight": { "type": "number" },
+                "fontSize":   { "type": "number" },
+                "fontStyle":  { "type": "string" }
+              }
+            }
+          },
+          "label":       { "type": "string" },
+          "isPassword":  { "type": "boolean" },
+          "borderColor": { "type": "string" },
+          "hint":        { "type": "string" },
+          "figmaNodeId": { "type": "string" },
+          "interactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "trigger":          { "type": "string" },
+                "actionType":       { "type": "string" },
+                "destinationNodeId":{ "type": "string" },
+                "navigation":       { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
