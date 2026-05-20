@@ -8,17 +8,18 @@ The AI Orchestrator acts as the **central controller** that decides which AI age
 
 To ensure all AI agents strictly follow the project guidelines, every agent **MUST** perform the following steps before starting any task:
 
-1. **Rule Ingestion:** Read `ai/architecture/android-architecture.md` and all files in `ai/guidelines/`.
+1. **Rule Ingestion:** Read `ai/architecture/android-architecture.md` and all files in `ai/guidelines/` (including `FIGMA_MCP_GUIDE.md`).
 2. **Context Awareness:** Read the specific feature requirements from `ai/features/`.
-3. **Communication:** The Orchestrator **MUST** provide a real-time status dashboard in the chat window, detailing which agent is running, its specific activity, and the final success/fail summary.
-4. **Enforcement:** The Orchestrator will block the flow if any "Quality Gate" agent (Accessibility, UI Validator, or Sonar) detects a violation of these rules. Non-compliant code will be sent back to the source agent for immediate correction.
+3. **Figma MCP + Normalization:** The Designer Agent **MUST** fetch live design data via the Figma MCP server using the `file_id` and `node_id` fields in the feature spec, then normalize the raw node response into `app/src/main/assets/ui-schema/<feature>_ui_schema.json` before generating Compose code. See `ai/guidelines/guide/FIGMA_MCP_GUIDE.md`. Static PNG files must NOT be used as the design source.
+4. **Communication:** The Orchestrator **MUST** provide a real-time status dashboard in the chat window, detailing which agent is running, its specific activity, and the final success/fail summary.
+5. **Enforcement:** The Orchestrator will block the flow if any "Quality Gate" agent (Accessibility, UI Validator, or Sonar) detects a violation of these rules. Non-compliant code will be sent back to the source agent for immediate correction.
 
 ---
 
 # 1. Development Phase (Creation)
 The goal is to generate functional, high-quality feature code.
 
-1. **Designer Agent**: Generate Compose UI layout and theme.
+1. **Designer Agent**: Fetch live design via Figma MCP (`figma_get_node`, `figma_get_styles`), normalize into a clean UI schema JSON, then generate Compose UI layout and theme from that schema.
 2. **Accessibility Agent**: Perform initial "Shift-Left" accessibility audit.
 3. **Functionality Agent**: Implement ViewModel, State management, and Business Logic.
 4. **Firebase Agent**: Setup Remote Config, A/B tests, and Feature Flags (Conditional).

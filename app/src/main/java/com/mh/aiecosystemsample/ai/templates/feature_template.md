@@ -9,7 +9,10 @@
 - [ ] [Criteria 3]
 
 ## Figma Design
-- **Link:** [Insert Figma URL here]
+- **URL:** [Full Figma URL, e.g. https://www.figma.com/design/FILE_ID/Title?node-id=NODE_ID]
+- **file_id:** [FILE_ID extracted from the URL]
+- **node_id:** [NODE_ID extracted from the URL, decoded, e.g. 203:966]
+- **Note:** AI agents must use `figma_get_node` and `figma_get_styles` MCP tools (see `ai/guidelines/guide/FIGMA_MCP_GUIDE.md`). Do NOT use a PNG file as the design source.
 
 ## Accessibility Design
 - **Link:** [Insert Accessibility Figma URL or specific section here]

@@ -10,7 +10,10 @@ A simple login screen that allows users to enter their email and password and na
 - [ ] Analytics events are triggered for screen view and button click.
 
 ## Figma Design
-- **Link:** app/src/main/res/drawable/login_screen_figma.png
+- **URL:** https://www.figma.com/design/vLcVO8YQvAu4G8QgSVtX2s/LoginApp?node-id=203%3A966
+- **file_id:** vLcVO8YQvAu4G8QgSVtX2s
+- **node_id:** 203:966
+- **Note:** Use the Figma MCP server (`figma_get_node`, `figma_get_styles`) to fetch live design data. See `ai/guidelines/guide/FIGMA_MCP_GUIDE.md`. Do NOT use the static PNG.
 
 ## Accessibility Design
 - no specific figma just follow standard accessibility 
