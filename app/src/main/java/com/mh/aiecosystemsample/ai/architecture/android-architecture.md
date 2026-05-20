@@ -36,7 +36,7 @@ Feature Layer
 AI Instruction Layer
 
 ```
-com.a7.aiecosystempoc
+com.mh.aiecosystempoc
 │
 ├── ai
 │

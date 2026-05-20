@@ -4,7 +4,7 @@ All AI-related documentation, guidelines, and agent definitions must reside with
 
 ## 1. Allowed Locations
 All `.md` files that guide the AI or define project rules must be placed in:
-`app/src/main/java/com/a7/aiecosystempoc/ai/`
+`app/src/main/java/com/mh/aiecosystempoc/ai/`
 
 ### Sub-directory structure:
 *   `ai/agents/`: Definitions of specific AI roles (e.g., Designer, Tester).

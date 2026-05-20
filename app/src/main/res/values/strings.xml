@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AIEcosystemPoc</string>
+    <string name="app_name">Figma MCP Demo</string>
     
     <!-- Catalogue Feature -->
     <string name="catalogue_reward_detail_low_balance_error">Almost there! Keep scanning.</string>

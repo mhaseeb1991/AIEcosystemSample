@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.a7.aiecosystempoc", appContext.packageName)
+        assertEquals("com.mh.aiecosystempoc", appContext.packageName)
     }
 }
