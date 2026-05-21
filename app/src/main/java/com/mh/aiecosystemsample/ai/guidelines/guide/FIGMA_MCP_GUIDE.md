@@ -67,9 +67,29 @@ This returns a clean UI schema with:
 - Global `tokens.palette` sorted by usage frequency — `[0]` is the primary color
 - Global `tokens.typography` scale sorted by font size descending
 
+### Step 1b — Verify schema against Figma (mandatory)
+
+The normalizer sorts components by their Y-coordinate in Figma's absolute bounding box. However, this order can be **incorrect** in certain cases:
+
+- **Grouped/container siblings:** When an Image and a Text node are siblings inside a group (e.g. a logo group containing both an icon and a title), their Y values may not reflect the intended visual stacking.
+- **Text alignment:** The schema's `textAlign` field reflects the *internal* text alignment (`textAlignHorizontal` in Figma), **not** the component's position on screen. A "Forgot Password?" text may have `textAlign: LEFT` internally but be visually right-aligned because its X position places it on the right side of the parent frame.
+- **Spacing:** The schema does not include gaps between components. The normalizer only emits bounding-box `width`/`height` per component.
+
+**The Designer Agent MUST:**
+
+1. **Call `figma_get_images`** to export the full screen node as a PNG for visual reference:
+   ```
+   figma_get_images(file_id="<FILE_ID>", node_ids=["<ROOT_NODE_ID>"], format="png", scale=2)
+   ```
+2. **Cross-check the schema component order** against the exported screenshot. If the visual order differs from the schema's `components[]` array, use the visual order from the screenshot.
+3. **Determine component alignment** from the screenshot (left, center, right), not from the schema's `textAlign` field. The `textAlign` field only controls text wrapping direction inside the component — it does not indicate screen-level positioning.
+4. **Estimate spacing** between components from the screenshot. Use the standard spacing scale (8dp, 16dp, 24dp, 32dp, 48dp) and choose the closest match for each gap visible in the design.
+
+> ⚠️ **Rule:** Never blindly trust the schema's component order or `textAlign` for layout. Always verify against the actual Figma design image.
+
 ### Step 2 — Generate theme from Figma tokens
 
-Run the theme generator to create `Color.kt`, `Theme.kt`, and `Type.kt` from the schema:
+Run the theme generator to create `Color.kt`, `Theme.kt`, and `Type.kt` from the verified schema:
 
 ```bash
 python3 tools/figma/generate_theme.py \
@@ -144,23 +164,24 @@ Every `ai/features/*.md` must include:
 
 ---
 
-## Offline / Manual Normalization
 
-If the MCP tool is unavailable, manually run:
+## No Fallback Policy
 
-```bash
-# 1. Fetch raw node
-cd llm-servers
-export FIGMA_TOKEN="$(grep '^FIGMA_TOKEN=' .env | cut -d'=' -f2-)"
-python3 fetch_figma.py <FILE_ID> <NODE_ID> --depth 6 --format json > /tmp/<feature>_raw.json
+There is **no offline or manual fallback**. All design data **MUST** come from the Figma MCP server (`llm-servers/figma_mcp_server.py`). If the MCP server is unreachable, fix the connection issue before proceeding. Do NOT generate UI without live Figma data.
 
-# 2. Normalize
-cd ..
-python3 tools/figma/normalize_figma_node.py \
-  --input /tmp/<feature>_raw.json \
-  --output app/src/main/assets/ui-schema/<feature>_ui_schema.json \
-  --file-id <FILE_ID>
-```
+---
+
+## Known Schema Limitations
+
+The normalizer produces a best-effort schema. The following fields are **unreliable** and must always be verified against the Figma design image:
+
+| Field | Limitation | What to do instead |
+| :--- | :--- | :--- |
+| `components[]` order | Y-sort can be wrong when nodes are grouped in containers or overlap | Export screen PNG and use the visual stacking order |
+| `textAlign` | Reflects internal `textAlignHorizontal` (text wrapping), not the component's screen position | Determine left/center/right alignment from the component's X position in the design |
+| Spacing (absent) | Schema has no gap/margin data between sibling components | Eyeball spacing from the design PNG; snap to 8dp/16dp/24dp/32dp/48dp grid |
+
+> **Bottom line:** The schema is the source for *what components exist* (types, text, colors, typography, interactions). The Figma design image is the source for *layout* (order, alignment, spacing).
 
 ---
 

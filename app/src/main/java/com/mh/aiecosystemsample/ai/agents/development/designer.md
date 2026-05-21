@@ -12,11 +12,16 @@ Before generating any UI, this agent **MUST**:
 4. **Fetch the Figma design using the MCP tools** (see `FIGMA_MCP_GUIDE.md`):
    - Call `figma_normalize(file_id, node_id, depth=6)` using the IDs from the feature spec.
    - This returns a clean UI schema with components, colors, typography, and auto-exported image URLs.
-   - Use the normalized schema as the source for Compose generation.
+   - **Verify schema against the actual design** (Step 1b in `FIGMA_MCP_GUIDE.md`):
+     - Export the screen as a PNG via `figma_get_images(file_id, [root_node_id], format="png", scale=2)`.
+     - Cross-check the schema's `components[]` order against the screenshot — use the visual order, not the schema order, if they differ.
+     - Determine each component's screen-level alignment (left/center/right) from the screenshot. Do **not** rely on the schema's `textAlign` field for positioning — it only controls internal text wrapping direction.
+     - Estimate spacing between components from the screenshot using the standard scale (8dp, 16dp, 24dp, 32dp, 48dp).
+   - Use the verified layout as the source for Compose generation.
    - **Generate theme files** from the schema by running: `python3 tools/figma/generate_theme.py --schema <schema_path> --theme-dir <theme_dir> --package <package>`.
    - For each `Image`/`Icon` component with `imageExportUrl`, download the asset and save to `app/src/main/res/drawable/`.
    - Call `figma_get_styles(file_id)` to verify color and typography tokens match `core/theme/`.
-   - **Do NOT use a PNG screenshot** as the design source. The live Figma data is the single source of truth.
+   - **Do NOT use a PNG screenshot** as the sole design source. The schema provides component data; the screenshot is used only to verify ordering, alignment, and spacing.
 
 ---
 
