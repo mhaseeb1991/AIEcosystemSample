@@ -308,6 +308,44 @@ async def call_tool(
                 arguments.get("depth", 6)
             )
             schema = _normalize_node(raw, file_id=arguments["file_id"])
+
+            # Auto-export image URLs for Image/Icon components
+            image_node_ids = [
+                comp["figmaNodeId"]
+                for comp in schema.get("components", [])
+                if comp.get("type") in ("Image", "Icon") and comp.get("figmaNodeId")
+            ]
+            if image_node_ids:
+                try:
+                    # Export as PNG (raster, for Image components)
+                    png_result = await client.get_images(
+                        arguments["file_id"],
+                        image_node_ids,
+                        scale=3.0,
+                        format="png"
+                    )
+                    png_map = png_result.get("images", {})
+
+                    # Export as SVG (vector, for Icon components)
+                    svg_result = await client.get_images(
+                        arguments["file_id"],
+                        image_node_ids,
+                        scale=1.0,
+                        format="svg"
+                    )
+                    svg_map = svg_result.get("images", {})
+
+                    for comp in schema.get("components", []):
+                        nid = comp.get("figmaNodeId")
+                        if not nid:
+                            continue
+                        if nid in png_map:
+                            comp["imageExportUrl"] = png_map[nid]
+                        if nid in svg_map:
+                            comp["svgExportUrl"] = svg_map[nid]
+                except Exception:
+                    pass  # Non-fatal: schema is still usable without export URLs
+
             return [TextContent(type="text", text=json.dumps(schema, indent=2, ensure_ascii=False))]
 
         else:

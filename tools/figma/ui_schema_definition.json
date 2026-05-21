@@ -72,7 +72,7 @@
         "type": "object",
         "required": ["type","id","name"],
         "properties": {
-          "type": { "type": "string", "enum": ["Text","TextField","Button","Image","Checkbox","Divider","Icon"] },
+          "type": { "type": "string", "enum": ["Text","TextField","Button","Image","Checkbox","Divider","Icon","Card","TopAppBar","BottomBar","Chip","Tab","Dropdown"] },
           "id":   { "type": "string" },
           "name": { "type": "string" },
           "text":            { "type": "string" },
@@ -81,6 +81,13 @@
           "cornerRadius":    { "type": "integer" },
           "width":           { "type": "number" },
           "height":          { "type": "number" },
+          "figmaNodeId":     { "type": "string", "description": "Figma node ID for image/icon export" },
+          "imageExportUrl":  { "type": "string", "description": "Auto-exported PNG URL from Figma Images API" },
+          "svgExportUrl":    { "type": "string", "description": "Auto-exported SVG URL from Figma Images API" },
+          "tintColor":       { "type": "string", "description": "Fill color for Icon components" },
+          "title":           { "type": "string", "description": "Title text for TopAppBar" },
+          "autoLayout":      { "$ref": "#/properties/layout/properties/autoLayout", "description": "Auto-layout info for Card/container components" },
+          "children":        { "type": "array", "description": "Nested child components for Card/TopAppBar/BottomBar", "items": { "$ref": "#/properties/components/items" } },
           "typography": {
             "type": "object",
             "properties": {

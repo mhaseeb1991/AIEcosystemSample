@@ -10,11 +10,12 @@ Before generating any UI, this agent **MUST**:
 2. Read `ai/architecture/android-architecture.md` for project structure rules.
 3. Read `ai/guidelines/guide/FIGMA_MCP_GUIDE.md` for how to fetch live design data.
 4. **Fetch the Figma design using the MCP tools** (see `FIGMA_MCP_GUIDE.md`):
-   - Call `figma_get_node(file_id, node_id, depth=3)` using the IDs from the feature spec.
-   - Normalize raw Figma JSON with `tools/figma/normalize_figma_node.py` and produce `app/src/main/assets/ui-schema/<feature>_ui_schema.json`.
+   - Call `figma_normalize(file_id, node_id, depth=6)` using the IDs from the feature spec.
+   - This returns a clean UI schema with components, colors, typography, and auto-exported image URLs.
    - Use the normalized schema as the source for Compose generation.
-   - Call `figma_get_styles(file_id)` to map colors and typography to `core/theme/` tokens.
-   - Call `figma_get_components(file_id)` to cross-check against existing `ui/components/`.
+   - **Generate theme files** from the schema by running: `python3 tools/figma/generate_theme.py --schema <schema_path> --theme-dir <theme_dir> --package <package>`.
+   - For each `Image`/`Icon` component with `imageExportUrl`, download the asset and save to `app/src/main/res/drawable/`.
+   - Call `figma_get_styles(file_id)` to verify color and typography tokens match `core/theme/`.
    - **Do NOT use a PNG screenshot** as the design source. The live Figma data is the single source of truth.
 
 ---

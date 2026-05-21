@@ -67,17 +67,22 @@ This returns a clean UI schema with:
 - Global `tokens.palette` sorted by usage frequency — `[0]` is the primary color
 - Global `tokens.typography` scale sorted by font size descending
 
-### Step 2 — Map tokens to `core/theme/`
+### Step 2 — Generate theme from Figma tokens
 
-```
-schema.tokens.primaryColor  → MaterialTheme.colorScheme.primary
-schema.tokens.palette[1]    → MaterialTheme.colorScheme.background or surface
-schema.tokens.typography[0] → MaterialTheme.typography.titleLarge (largest font)
-schema.tokens.typography[1] → MaterialTheme.typography.bodyLarge
-schema.tokens.typography[2] → MaterialTheme.typography.bodyMedium
+Run the theme generator to create `Color.kt`, `Theme.kt`, and `Type.kt` from the schema:
+
+```bash
+python3 tools/figma/generate_theme.py \
+  --schema app/src/main/assets/ui-schema/<feature>_ui_schema.json \
+  --theme-dir app/src/main/java/com/mh/aiecosystemsample/core/theme \
+  --package com.mh.aiecosystemsample.core.theme \
+  --theme-name AIEcosystemPocTheme
 ```
 
-> ❌ Never hardcode hex values in Kotlin. Map them to the theme's named tokens.
+This automatically maps Figma palette to Material color tokens and typography to Material text styles.
+
+> Never hardcode hex values in Kotlin. Always run the theme generator.
+> Never keep default purple/pink Material colors. The theme must match Figma.
 
 ### Step 3 — Generate Compose UI per component
 
@@ -85,18 +90,40 @@ For each component in `schema.components[]`:
 
 | schema `type` | Compose component | Notes |
 | :--- | :--- | :--- |
-| `Text` | `Text()` | Use `typography` field for style; `textColor` → colorScheme token |
-| `TextField` | `OutlinedTextField()` | Use `label`, `isPassword: true` → `PasswordVisualTransformation()` |
-| `Button` | `PrimaryButton()` | Use `text`, `cornerRadius`, `backgroundColor` → `RoundedCornerShape(cornerRadius.dp)` |
-| `Image` | `Image(painterResource)` | Export drawable using `figma_get_images(node_id = figmaNodeId)` |
+| `Text` | `Text()` | Use `typography` field for style; `textColor` maps to colorScheme token |
+| `TextField` | `OutlinedTextField()` | Use `label`, `isPassword: true` for `PasswordVisualTransformation()` |
+| `Button` | `PrimaryButton()` | Use `text`, `cornerRadius`, `backgroundColor` for `RoundedCornerShape(cornerRadius.dp)` |
+| `Image` | `Image(painterResource)` | `imageExportUrl` is auto-populated — download to `res/drawable/` |
+| `Icon` | `Icon(painterResource)` | Small vector asset — download from `svgExportUrl`, use `tintColor` |
+| `Card` | `Card()` | Container with `children[]` — recurse into nested components |
+| `TopAppBar` | `TopAppBar()` | Use `title`, `backgroundColor`, `children[]` for nav icon/actions |
+| `BottomBar` | `NavigationBar()` | Use `children[]` for nav items |
+| `Chip` | `AssistChip()` / `FilterChip()` | Use `text`, `cornerRadius` |
+| `Tab` | `Tab()` inside `TabRow` | Use `text` |
+| `Dropdown` | `ExposedDropdownMenuBox()` | Use `text` as selected value |
 | `Divider` | `HorizontalDivider()` | Use `color` token |
 | `Checkbox` | `Checkbox()` | |
 
-### Step 4 — Export image assets
+### Step 4 — Download image/icon assets
 
-For each `Image` component, call:
+The `figma_normalize` tool now **automatically exports** image URLs. Each `Image` or `Icon` component
+in the schema includes:
+- `imageExportUrl` — PNG download link (3× scale, for raster images)
+- `svgExportUrl` — SVG download link (for vector icons, convertible to Android VectorDrawable)
+
+**Important:** The normalizer extracts only the actual image/vector child from a container — not the
+whole container. If a Figma group named "Logo" contains both a text node and an image rectangle,
+only the image rectangle's node ID is used for export. This prevents text from appearing inside
+the exported image.
+
+For each component with export URLs:
+1. Download the PNG or SVG from the URL.
+2. Save to `app/src/main/res/drawable/<component_name>.png` (or `.xml` for SVG→VectorDrawable).
+3. Reference in Compose: `painterResource(R.drawable.<component_name>)`.
+
+If export URLs are missing (e.g. network error), manually call:
 ```
-figma_get_images(file_id="<FILE_ID>", node_ids=["<figmaNodeId>"], format="png", scale=2)
+figma_get_images(file_id="<FILE_ID>", node_ids=["<figmaNodeId>"], format="svg", scale=1)
 ```
 Download the returned URL and save to `app/src/main/res/drawable/`.
 

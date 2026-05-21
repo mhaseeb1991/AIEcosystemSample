@@ -42,13 +42,36 @@ SKIP_EXACT_NAMES = {"9:41"}
 #  Heuristic keyword maps for semantic detection
 # ─────────────────────────────────────────────
 TEXT_FIELD_KEYWORDS  = ["input","field","textfield","text field","holder","email",
-                        "password","phone","username","search","address","name"]
-PASSWORD_KEYWORDS    = ["password","pin","otp","passcode"]
+                        "password","phone number","username","search bar","address field",
+                        "name field","text input","form field"]
+PASSWORD_KEYWORDS    = ["password","pin","otp","passcode","secret"]
 BUTTON_KEYWORDS      = ["button","btn","cta","submit","login","log in","sign in",
-                        "sign up","continue","next","done"]
-IMAGE_KEYWORDS       = ["logo","banner","illustration","avatar","image"]
+                        "sign up","continue","next","done","save","confirm","cancel",
+                        "add to cart","checkout","apply","send","pay","proceed"]
+IMAGE_KEYWORDS       = ["logo","banner","illustration","avatar","image","img",
+                        "photo","pic","thumbnail","badge","graphic","cover",
+                        "hero","carousel","gallery","placeholder"]
 CHECKBOX_KEYWORDS    = ["checkbox","check box","toggle","switch","radio"]
-DIVIDER_KEYWORDS     = ["divider","separator","line","hr"]
+DIVIDER_KEYWORDS     = ["divider","separator","hr"]
+ICON_KEYWORDS        = ["icon","chevron","arrow","close","back","menu",
+                        "visibility","eye","lock","star","heart","check","cross",
+                        "delete","edit","share","settings","notification","bell",
+                        "home icon","profile icon","user icon","mail icon","calendar",
+                        "clock","download","upload","refresh","filter","sort","more",
+                        "add","remove","copy","paste","undo","redo","info","warning",
+                        "error icon","success","help","question","link","attach",
+                        "bookmark","favorite","thumbs","like","dislike","mute",
+                        "volume","play","pause","stop","skip","forward","backward"]
+CARD_KEYWORDS        = ["card","tile","item","cell","list item","product card",
+                        "order card","review card","feed item"]
+TOP_BAR_KEYWORDS     = ["top bar","topbar","app bar","appbar","toolbar","header",
+                        "navigation bar","nav bar"]
+BOTTOM_BAR_KEYWORDS  = ["bottom bar","bottombar","bottom nav","bottomnav",
+                        "tab bar","tabbar","bottom navigation","bottom tab"]
+CHIP_KEYWORDS        = ["chip","tag","label chip","filter chip","choice chip"]
+TAB_KEYWORDS         = ["tab","tabs","tab item","tab indicator"]
+DROPDOWN_KEYWORDS    = ["dropdown","drop down","select","picker","spinner",
+                        "combo box","combobox","menu list"]
 
 
 # ─────────────────────────────────────────────
@@ -155,26 +178,72 @@ def _matches(name: str, kws: list[str]) -> bool:
     n = _norm(name)
     return any(kw in n for kw in kws)
 
+def _is_small_visual(node: dict[str, Any], max_size: float = 80.0) -> bool:
+    """Check if node is small enough to likely be an icon (< max_size px)."""
+    bb = node.get("absoluteBoundingBox", {})
+    w = bb.get("width", 999)
+    h = bb.get("height", 999)
+    return w <= max_size and h <= max_size
+
+def _has_only_vector_children(node: dict[str, Any]) -> bool:
+    """True if all leaf children are vector-like (VECTOR, LINE, ELLIPSE, etc.)."""
+    children = node.get("children", [])
+    if not children:
+        return False
+    vector_types = {"VECTOR", "LINE", "ELLIPSE", "STAR", "REGULAR_POLYGON", "BOOLEAN_OPERATION"}
+    return all(c.get("type") in vector_types for c in children)
+
 def infer_type(node: dict[str, Any]) -> str | None:
     t = node.get("type", "")
     name = node.get("name", "")
+
+    # TEXT nodes are always Text
     if t == "TEXT":
         return "Text"
-    if t == "RECTANGLE" and has_image_fill(node):
+
+    # Any node with an IMAGE fill is an Image
+    if has_image_fill(node):
         return "Image"
+
+    # FRAME / GROUP / COMPONENT / INSTANCE
     if t in ("FRAME", "GROUP", "COMPONENT", "INSTANCE"):
+        # Check name-based heuristics (order matters: more specific first)
+        if _matches(name, TOP_BAR_KEYWORDS):
+            return "TopAppBar"
+        if _matches(name, BOTTOM_BAR_KEYWORDS):
+            return "BottomBar"
         if _matches(name, BUTTON_KEYWORDS):
             return "Button"
         if _matches(name, TEXT_FIELD_KEYWORDS):
             return "TextField"
-        if _matches(name, IMAGE_KEYWORDS):
-            return "Image"
+        if _matches(name, DROPDOWN_KEYWORDS):
+            return "Dropdown"
         if _matches(name, CHECKBOX_KEYWORDS):
             return "Checkbox"
+        if _matches(name, TAB_KEYWORDS):
+            return "Tab"
+        if _matches(name, CHIP_KEYWORDS):
+            return "Chip"
         if _matches(name, DIVIDER_KEYWORDS):
             return "Divider"
-    if t == "VECTOR" and _matches(name, ["icon", "chevron", "arrow"]):
+        if _matches(name, CARD_KEYWORDS):
+            return "Card"
+        # Icon detection: name matches icon keywords
+        if _matches(name, ICON_KEYWORDS):
+            if _is_small_visual(node):
+                return "Icon"
+            return "Image"
+        # Small INSTANCE/COMPONENT with only vector children -> likely an icon
+        if t in ("INSTANCE", "COMPONENT") and _is_small_visual(node) and _has_only_vector_children(node):
+            return "Icon"
+        # IMAGE_KEYWORDS (broader, checked after icon)
+        if _matches(name, IMAGE_KEYWORDS):
+            return "Image"
+
+    # Pure vector types -> Icon
+    if t in ("VECTOR", "BOOLEAN_OPERATION", "LINE", "ELLIPSE", "STAR", "REGULAR_POLYGON"):
         return "Icon"
+
     return None
 
 
@@ -272,16 +341,113 @@ def collect(node: dict[str, Any], out: list[dict[str, Any]], _root: bool = False
 
     # ── Image ──
     if semantic == "Image":
-        entry = {"type": "Image", "id": node["id"],
-                 "name": _norm(node.get("name", "")).replace(" ", "_"),
-                 "figmaNodeId": node["id"]}
-        entry.update(bbox_size(node))
-        # If the Image container also has text children, collect them first then add image
-        text_children: list[dict[str, Any]] = []
+        # Find the actual image-bearing child (IMAGE fill, vector, etc.)
+        # so we export only the graphic, not any sibling text in the container.
+        actual_image_node = node  # default: the node itself
+        if not has_image_fill(node):
+            # Container detected by name — dig into children for the real image
+            for child in node.get("children", []):
+                if has_image_fill(child):
+                    actual_image_node = child
+                    break
+                if child.get("type") in ("VECTOR", "BOOLEAN_OPERATION", "ELLIPSE",
+                                         "STAR", "LINE", "REGULAR_POLYGON"):
+                    actual_image_node = child
+                    break
+                # Check grandchildren for image fills (nested group)
+                for gc in child.get("children", []):
+                    if has_image_fill(gc):
+                        actual_image_node = gc
+                        break
+
+        # Emit any text children in the container as separate Text components
+        # (they are siblings of the image, not part of it)
         for child in sorted(node.get("children", []), key=y_order):
             if child.get("type") == "TEXT":
-                collect(child, text_children)
-        out.extend(text_children)
+                collect(child, out)
+
+        entry = {"type": "Image", "id": node["id"],
+                 "name": _norm(node.get("name", "")).replace(" ", "_"),
+                 "figmaNodeId": actual_image_node["id"]}
+        entry.update(bbox_size(actual_image_node))
+        out.append(entry)
+        return
+
+    # ── Icon ──
+    if semantic == "Icon":
+        entry = {"type": "Icon", "id": node["id"],
+                 "name": _norm(node.get("name", "")).replace(" ", "_"),
+                 "figmaNodeId": node["id"]}
+        fill = first_solid_fill(node)
+        if fill:
+            entry["tintColor"] = fill
+        entry.update(bbox_size(node))
+        out.append(entry)
+        return
+
+    # ── Card ──
+    if semantic == "Card":
+        entry = {"type": "Card", "id": node["id"], "name": node.get("name", "")}
+        bg = _deep_fill(node)
+        if bg:
+            entry["backgroundColor"] = bg
+        cr = _deep_border_radius(node)
+        if cr is not None:
+            entry["cornerRadius"] = cr
+        entry.update(bbox_size(node))
+        auto = extract_auto_layout(node)
+        if auto:
+            entry["autoLayout"] = auto
+        children_out: list[dict[str, Any]] = []
+        for child in sorted(node.get("children", []), key=y_order):
+            collect(child, children_out)
+        if children_out:
+            entry["children"] = children_out
+        out.append(entry)
+        return
+
+    # ── TopAppBar ──
+    if semantic == "TopAppBar":
+        entry = {"type": "TopAppBar", "id": node["id"], "name": node.get("name", "")}
+        entry["title"] = _deep_first_text(node)
+        bg = _deep_fill(node)
+        if bg:
+            entry["backgroundColor"] = bg
+        entry.update(bbox_size(node))
+        children_out = []
+        for child in sorted(node.get("children", []), key=y_order):
+            collect(child, children_out)
+        if children_out:
+            entry["children"] = children_out
+        out.append(entry)
+        return
+
+    # ── BottomBar ──
+    if semantic == "BottomBar":
+        entry = {"type": "BottomBar", "id": node["id"], "name": node.get("name", "")}
+        bg = _deep_fill(node)
+        if bg:
+            entry["backgroundColor"] = bg
+        entry.update(bbox_size(node))
+        children_out = []
+        for child in sorted(node.get("children", []), key=y_order):
+            collect(child, children_out)
+        if children_out:
+            entry["children"] = children_out
+        out.append(entry)
+        return
+
+    # ── Chip / Tab / Dropdown ──
+    if semantic in ("Chip", "Tab", "Dropdown"):
+        entry = {"type": semantic, "id": node["id"], "name": node.get("name", "")}
+        entry["text"] = _deep_first_text(node)
+        bg = _deep_fill(node)
+        if bg:
+            entry["backgroundColor"] = bg
+        cr = _deep_border_radius(node)
+        if cr is not None:
+            entry["cornerRadius"] = cr
+        entry.update(bbox_size(node))
         out.append(entry)
         return
 
